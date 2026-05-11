@@ -2,7 +2,6 @@ import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL);
 
-// 初始化資料表
 async function initTable() {
   await sql`
     CREATE TABLE IF NOT EXISTS posts (
@@ -18,8 +17,15 @@ async function initTable() {
   `;
 }
 
+function setCORS(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
 export default async function handler(req, res) {
-  // CORS preflight
+  setCORS(res);
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -27,15 +33,11 @@ export default async function handler(req, res) {
   try {
     await initTable();
 
-    // GET - 取得所有貼文
     if (req.method === 'GET') {
-      const posts = await sql`
-        SELECT * FROM posts ORDER BY timestamp DESC
-      `;
+      const posts = await sql`SELECT * FROM posts ORDER BY timestamp DESC`;
       return res.status(200).json(posts);
     }
 
-    // POST - 新增貼文
     if (req.method === 'POST') {
       const { text, imgs, full_date, timestamp } = req.body;
       const result = await sql`
@@ -46,14 +48,12 @@ export default async function handler(req, res) {
       return res.status(201).json(result[0]);
     }
 
-    // DELETE - 刪除貼文
     if (req.method === 'DELETE') {
       const { id } = req.query;
       await sql`DELETE FROM posts WHERE id = ${id}`;
       return res.status(200).json({ success: true });
     }
 
-    // PATCH - 更新按讚
     if (req.method === 'PATCH') {
       const { id } = req.query;
       const { likes, liked } = req.body;
