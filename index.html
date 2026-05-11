@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Love Diary</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --primary: #1877f2;
+    --primary-dark: #1558b0;
+    --primary-light: #e7f0fd;
+    --text: #050505;
+    --text-secondary: #65676b;
+    --border: #ced0d4;
+    --border-light: #e4e6ea;
+    --hover: #f2f2f2;
+    --online: #42b72a;
+    --shadow: 0 1px 2px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.05);
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    padding: 0 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px;
+  }
+
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+  }
+
+  .nav-center {
+    display: flex; gap: 4px;
+  }
+
+  .nav-btn {
+    width: 112px; height: 44px;
+    border: none; background: transparent;
+    border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    font-size: 22px;
+    transition: background .15s, color .15s;
+    border-bottom: 3px solid transparent;
+  }
+  .nav-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .nav-btn:hover { background: var(--hover); }
+
+  .nav-right { display: flex; gap: 8px; align-items: center; }
+
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #e84393, #ff6b6b);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 20px;
+    cursor: pointer; flex-shrink: 0;
+  }
+
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--hover); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--text);
+    transition: background .15s;
+  }
+  .icon-btn:hover { background: var(--border-light); }
+
+  /* LAYOUT */
+  .layout {
+    max-width: 680px; margin: 0 auto;
+    display: block;
+    padding: 20px 16px;
+  }
+
+  /* SIDEBAR */
+  .sidebar { display: flex; flex-direction: column; gap: 8px; }
+
+  .sidebar-profile {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; border-radius: var(--radius);
+    cursor: pointer; transition: background .15s;
+  }
+  .sidebar-profile:hover { background: var(--hover); }
+
+  .sidebar-profile .name {
+    font-weight: 600; font-size: 15px;
+  }
+
+  .sidebar-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px;
+    cursor: pointer; font-size: 15px; font-weight: 500;
+    transition: background .15s;
+  }
+  .sidebar-item:hover { background: var(--hover); }
+
+  .sidebar-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+
+  /* FEED */
+  .feed { display: flex; flex-direction: column; gap: 16px; }
+
+  /* CREATE POST */
+  .create-post {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .create-top {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+
+  .create-input {
+    flex: 1; padding: 10px 14px;
+    background: var(--bg); border: none;
+    border-radius: 24px; font-size: 16px;
+    font-family: inherit; cursor: pointer;
+    color: var(--text-secondary);
+    transition: background .15s;
+  }
+  .create-input:focus { outline: none; background: #e8eaed; }
+
+  .divider { height: 1px; background: var(--border-light); margin: 8px 0; }
+
+  .create-actions {
+    display: flex; gap: 4px;
+  }
+
+  .action-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 8px; border: none; background: transparent;
+    border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    font-family: inherit;
+    transition: background .15s;
+  }
+  .action-btn:hover { background: var(--hover); }
+  .action-btn .emoji { font-size: 20px; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: center; justify-content: center;
+    animation: fadeIn .15s ease;
+  }
+  .modal-overlay.show { display: flex; }
+
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 100%; max-width: 520px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    animation: slideUp .2s ease;
+    max-height: 90vh; overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-light);
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+
+  .modal-header h2 {
+    font-size: 20px; font-weight: 700; flex: 1; text-align: center;
+  }
+
+  .close-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--hover); border: none; cursor: pointer;
+    font-size: 18px; display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .close-btn:hover { background: var(--border); }
+
+  .modal-body { padding: 16px; }
+
+  .modal-user { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .modal-user .name { font-weight: 600; }
+  .modal-user .privacy {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--hover); padding: 3px 8px;
+    border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+
+  .post-textarea {
+    width: 100%; min-height: 120px;
+    border: none; resize: none; font-size: 18px;
+    font-family: inherit; color: var(--text);
+    background: transparent; outline: none;
+    placeholder-color: #bcc0c4;
+    line-height: 1.5;
+  }
+  .post-textarea::placeholder { color: #bcc0c4; }
+
+  .image-preview-area {
+    margin: 12px 0;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: none;
+    position: relative;
+  }
+  .image-preview-area.has-image { display: block; border: none; }
+
+  .image-preview-area img {
+    width: 100%; max-height: 300px;
+    object-fit: cover; border-radius: 8px; display: block;
+  }
+
+  /* 多圖預覽格 */
+  .multi-img-grid {
+    display: grid; gap: 4px; border-radius: 10px; overflow: hidden;
+  }
+  .multi-img-grid.count-1 { grid-template-columns: 1fr; }
+  .multi-img-grid.count-2 { grid-template-columns: 1fr 1fr; }
+  .multi-img-grid.count-3 { grid-template-columns: 1fr 1fr; }
+  .multi-img-grid.count-3 .img-thumb:first-child { grid-column: 1 / -1; }
+  .multi-img-grid.count-4 { grid-template-columns: 1fr 1fr; }
+
+  .img-thumb {
+    position: relative; overflow: hidden;
+    aspect-ratio: 1; cursor: pointer;
+  }
+  .multi-img-grid.count-1 .img-thumb { aspect-ratio: 16/9; }
+  .multi-img-grid.count-3 .img-thumb:first-child { aspect-ratio: 16/7; }
+
+  .img-thumb img {
+    width: 100%; height: 100%; object-fit: cover;
+    border-radius: 0; max-height: none;
+  }
+  .img-thumb .rm-btn {
+    position: absolute; top: 6px; right: 6px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); border: none; cursor: pointer;
+    color: #fff; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .15s;
+  }
+  .img-thumb:hover .rm-btn { opacity: 1; }
+
+  .add-more-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; margin-top: 8px;
+    background: var(--bg); border: 1px dashed var(--border);
+    border-radius: 8px; cursor: pointer; font-size: 14px;
+    font-weight: 600; color: var(--text-secondary);
+    width: fit-content; transition: background .15s;
+  }
+  .add-more-btn:hover { background: var(--border-light); }
+
+  .remove-img {
+    position: absolute; top: 8px; right: 8px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); border: none; cursor: pointer;
+    color: #fff; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* 貼文多圖格 */
+  .post-img-grid {
+    display: grid; gap: 2px;
+  }
+  .post-img-grid.count-1 { grid-template-columns: 1fr; }
+  .post-img-grid.count-2 { grid-template-columns: 1fr 1fr; }
+  .post-img-grid.count-3 { grid-template-columns: 1fr 1fr; }
+  .post-img-grid.count-3 img:first-child { grid-column: 1 / -1; }
+  .post-img-grid.count-4 { grid-template-columns: 1fr 1fr; }
+  .post-img-grid img {
+    width: 100%; object-fit: cover;
+    aspect-ratio: 1; display: block;
+    cursor: zoom-in; transition: opacity .15s;
+  }
+  .post-img-grid img:hover { opacity: 0.92; }
+  .post-img-grid.count-1 img { aspect-ratio: 16/9; max-height: 500px; }
+  .post-img-grid.count-3 img:first-child { aspect-ratio: 16/7; }
+
+  /* LIGHTBOX */
+  .lightbox {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.92);
+    align-items: center; justify-content: center;
+    animation: fadeIn .2s ease;
+  }
+  .lightbox.show { display: flex; }
+
+  .lightbox-img {
+    max-width: 92vw; max-height: 92vh;
+    object-fit: contain; border-radius: 6px;
+    box-shadow: 0 8px 48px rgba(0,0,0,0.5);
+    animation: slideUp .2s ease;
+    user-select: none;
+  }
+
+  .lightbox-close {
+    position: fixed; top: 18px; right: 22px;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none;
+    color: #fff; font-size: 22px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
+
+  .lightbox-nav {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none;
+    color: #fff; font-size: 22px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .lightbox-nav:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-prev { left: 16px; }
+  .lightbox-next { right: 16px; }
+  .lightbox-nav:disabled { opacity: 0.2; cursor: default; }
+
+  .lightbox-counter {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.8); font-size: 14px; font-weight: 600;
+    background: rgba(0,0,0,0.4); padding: 4px 14px; border-radius: 20px;
+  }
+
+  .upload-zone {
+    padding: 24px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; cursor: pointer;
+  }
+  .upload-zone .icon { font-size: 36px; }
+  .upload-zone p { font-size: 16px; font-weight: 600; }
+  .upload-zone span { font-size: 13px; color: var(--text-secondary); }
+
+  .add-to-post {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    margin: 12px 0;
+    cursor: pointer;
+  }
+  .add-to-post span { font-weight: 600; font-size: 15px; }
+  .add-icons { display: flex; gap: 8px; }
+  .add-icon { font-size: 22px; cursor: pointer; transition: transform .15s; }
+  .add-icon:hover { transform: scale(1.2); }
+
+  .submit-btn {
+    width: 100%; padding: 10px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-size: 16px; font-weight: 700; font-family: inherit;
+    transition: background .15s;
+  }
+  .submit-btn:hover { background: var(--primary-dark); }
+  .submit-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+  /* POSTS */
+  .post-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    animation: slideUp .25s ease;
+  }
+
+  .post-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px 0;
+    justify-content: space-between;
+  }
+
+  .post-header-left { display: flex; align-items: center; gap: 10px; }
+
+  .post-meta { display: flex; flex-direction: column; }
+  .post-meta .name { font-weight: 700; font-size: 15px; }
+  .post-meta .date {
+    font-size: 13px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .post-text { padding: 12px 16px; font-size: 15px; line-height: 1.6; }
+  .post-text.large { font-size: 22px; font-weight: 500; }
+
+  .post-img { width: 100%; display: block; max-height: 500px; object-fit: cover; }
+
+  .post-stats {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 16px;
+    font-size: 15px; color: var(--text-secondary);
+  }
+
+  .reactions { display: flex; align-items: center; gap: 4px; }
+  .reaction-icons { font-size: 16px; }
+
+  .post-actions {
+    display: flex; padding: 4px 8px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .post-action-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 8px;
+    border: none; background: transparent; cursor: pointer;
+    border-radius: 8px; font-size: 15px; font-weight: 600;
+    color: var(--text-secondary); font-family: inherit;
+    transition: background .15s, color .15s;
+  }
+  .post-action-btn:hover { background: var(--hover); color: var(--text); }
+  .post-action-btn.liked { color: var(--primary); }
+  .post-action-btn .btn-icon { font-size: 20px; }
+
+  /* RIGHT SIDEBAR */
+  .right-sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  .widget {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .widget h3 { font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+
+  .contact-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; border-radius: 8px; cursor: pointer;
+    transition: background .15s;
+  }
+  .contact-item:hover { background: var(--hover); }
+  .contact-item .cname { font-size: 15px; font-weight: 500; }
+
+  .online-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--online); margin-left: auto;
+    box-shadow: 0 0 0 2px #fff;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+  .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 16px; }
+
+  /* Hidden file input */
+  #file-input { display: none; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar, .right-sidebar { display: none; }
+  }
+
+  /* ── 燈箱 Lightbox ──────────────────────────────────────────── */
+  .lightbox {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.92);
+    align-items: center; justify-content: center;
+    animation: fadeIn .2s ease;
+  }
+  .lightbox.show { display: flex; }
+
+  .lightbox-img {
+    max-width: 92vw; max-height: 90vh;
+    object-fit: contain; border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    animation: slideUp .2s ease;
+    user-select: none;
+  }
+
+  .lightbox-close {
+    position: fixed; top: 16px; right: 20px;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; cursor: pointer;
+    color: #fff; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
+
+  .lightbox-prev, .lightbox-next {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; cursor: pointer;
+    color: #fff; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .lightbox-prev { left: 16px; }
+  .lightbox-next { right: 16px; }
+  .lightbox-prev:hover, .lightbox-next:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-prev.hidden, .lightbox-next.hidden { display: none; }
+
+  .lightbox-counter {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.7); font-size: 14px;
+  }
+
+  .post-img-grid img { cursor: zoom-in; transition: opacity .15s; }
+  .post-img-grid img:hover { opacity: 0.88; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">💕 Love Diary</div>
+  <div class="nav-center">
+    <button class="nav-btn active">🏠</button>
+    <button class="nav-btn">📺</button>
+    <button class="nav-btn">👥</button>
+    <button class="nav-btn">🎮</button>
+  </div>
+  <div class="nav-right">
+    <button class="icon-btn">🔍</button>
+    <button class="icon-btn">💬</button>
+    <button class="icon-btn">🔔</button>
+    <div class="avatar">❤️</div>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- FEED -->
+  <main class="feed">
+
+    <!-- CREATE POST CARD -->
+    <div class="create-post">
+      <div class="create-top">
+        <div class="avatar">❤️</div>
+        <div class="create-input" onclick="openModal()" tabindex="0">River，你在想什麼？</div>
+      </div>
+      <div class="divider"></div>
+      <div class="create-actions">
+        <button class="action-btn" onclick="openModal('video')">
+          <span class="emoji">📹</span> 直播影片
+        </button>
+        <button class="action-btn" onclick="openModal('photo')">
+          <span class="emoji">🖼️</span> 相片/影片
+        </button>
+        <button class="action-btn" onclick="openModal('feeling')">
+          <span class="emoji">😊</span> 心情/活動
+        </button>
+      </div>
+    </div>
+
+    <!-- POSTS FEED -->
+    <div id="feed-loading" style="text-align:center;padding:32px;color:#65676b;display:none">
+      ⏳ 載入中…
+    </div>
+    <div id="posts-feed">
+
+    </div>
+
+  </main>
+
+
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-prev" id="lb-prev" onclick="lbNav(-1);event.stopPropagation()">‹</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="">
+  <button class="lightbox-next" id="lb-next" onclick="lbNav(1);event.stopPropagation()">›</button>
+  <div class="lightbox-counter" id="lb-counter"></div>
+</div>
+
+<!-- POST MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="width:36px"></div>
+      <h2>建立貼文</h2>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-user">
+        <div class="avatar">❤️</div>
+        <div>
+          <div class="name">River</div>
+          <div class="privacy">🌐 公開 ▾</div>
+        </div>
+      </div>
+
+      <textarea
+        class="post-textarea"
+        id="post-text"
+        placeholder="River，你在想什麼？"
+        oninput="checkSubmit()"
+      ></textarea>
+
+      <!-- Image preview -->
+      <div class="image-preview-area" id="image-preview-area">
+        <div class="upload-zone" id="upload-zone" onclick="triggerFileInput()">
+          <div class="icon">🖼️</div>
+          <p>新增相片／影片</p>
+          <span>可選多張，或拖曳放置</span>
+        </div>
+        <div id="multi-img-grid" class="multi-img-grid" style="display:none"></div>
+        <button class="add-more-btn" id="add-more-btn" onclick="triggerFileInput()" style="display:none">
+          ＋ 繼續新增照片
+        </button>
+      </div>
+
+      <input type="file" id="file-input" accept="image/*" multiple onchange="handleFileSelect(event)">
+
+      <div class="add-to-post" onclick="toggleImageArea()">
+        <span>新增到你的貼文</span>
+        <div class="add-icons">
+          <span class="add-icon" title="相片/影片">🖼️</span>
+          <span class="add-icon" title="標記朋友">👥</span>
+          <span class="add-icon" title="心情/活動">😊</span>
+          <span class="add-icon" title="打卡">📍</span>
+          <span class="add-icon" title="GIF">🎭</span>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="submitPost()" disabled>發佈</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vercel API -->
+<script>
+  // ── API 設定 ──────────────────────────────────────────────────
+  const API_URL = 'https://diary-2.vercel.app/api/posts';
+
+  // ── 燈箱 Lightbox ─────────────────────────────────────────────
+  let lbImages = [];
+  let lbIndex = 0;
+
+  function openLightbox(images, index) {
+    lbImages = images;
+    lbIndex = index;
+    renderLightbox();
+    document.getElementById('lightbox').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function renderLightbox() {
+    document.getElementById('lightbox-img').src = lbImages[lbIndex];
+    document.getElementById('lb-counter').textContent =
+      lbImages.length > 1 ? `${lbIndex + 1} / ${lbImages.length}` : '';
+    document.getElementById('lb-prev').classList.toggle('hidden', lbIndex === 0);
+    document.getElementById('lb-next').classList.toggle('hidden', lbIndex === lbImages.length - 1);
+  }
+
+  function lbNav(dir) {
+    lbIndex = Math.max(0, Math.min(lbImages.length - 1, lbIndex + dir));
+    renderLightbox();
+  }
+
+  function closeLightbox(e) {
+    if (e && e.target !== document.getElementById('lightbox') && e.target !== document.querySelector('.lightbox-close')) return;
+    document.getElementById('lightbox').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (!document.getElementById('lightbox').classList.contains('show')) return;
+    if (e.key === 'ArrowLeft') lbNav(-1);
+    if (e.key === 'ArrowRight') lbNav(1);
+    if (e.key === 'Escape') {
+      document.getElementById('lightbox').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // ── 狀態 ──────────────────────────────────────────────────────
+  let currentImages = []; // 改為陣列支援多張
+  let imageAreaVisible = false;
+
+  // ── 工具函式 ──────────────────────────────────────────────────
+  function formatDate(d) {
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  function setLoading(show) {
+    document.getElementById('feed-loading').style.display = show ? 'block' : 'none';
+  }
+
+  // ── 渲染貼文卡片（支援多圖）────────────────────────────────────
+  function renderCard(data) {
+    const { id, text, img, imgs, full_date, timestamp, likes, liked } = data;
+    const dateStr = timestamp ? formatDate(new Date(parseInt(timestamp))) : full_date;
+
+    // 支援舊格式(img)和新格式(imgs陣列)
+    let images = [];
+    if (imgs && imgs.length) images = imgs;
+    else if (img) images = [img];
+
+    const imgHtml = images.length
+      ? `<div class="post-img-grid count-${Math.min(images.length,4)}">
+          ${images.slice(0,4).map((src, i) => `<img src="${src}" alt="照片" loading="lazy" onclick='openLightbox(${JSON.stringify(images)},${i})'>`).join('')}
+         </div>`
+      : '';
+
+    const card = document.createElement('div');
+    card.className = 'post-card';
+    card.dataset.id = id;
+    card.innerHTML = `
+      <div class="post-header">
+        <div class="post-header-left">
+          <div class="avatar">❤️</div>
+          <div class="post-meta">
+            <span class="name">River</span>
+            <span class="date" title="${full_date}">📅 ${dateStr} · 🌐</span>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="deletePost(this)">🗑️</button>
+      </div>
+      ${text ? `<div class="post-text ${!images.length && text.length < 80 ? 'large' : ''}">${escapeHtml(text)}</div>` : ''}
+      ${imgHtml}
+      <div class="post-stats">
+        <div class="reactions">
+          <span class="reaction-icons">${likes > 0 ? '👍' : ''}</span>
+          <span class="like-count">${likes || 0}</span>
+        </div>
+        <span>0 則留言</span>
+      </div>
+      <div class="post-actions">
+        <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="toggleLike(this)">
+          <span class="btn-icon">👍</span> 讚
+        </button>
+        <button class="post-action-btn"><span class="btn-icon">💬</span> 留言</button>
+        <button class="post-action-btn"><span class="btn-icon">↗️</span> 分享</button>
+      </div>
+    `;
+    return card;
+  }
+
+  // ── 更新預覽格 ────────────────────────────────────────────────
+  function updatePreviewGrid() {
+    const area = document.getElementById('image-preview-area');
+    const zone = document.getElementById('upload-zone');
+    const grid = document.getElementById('multi-img-grid');
+    const addMore = document.getElementById('add-more-btn');
+
+    if (currentImages.length === 0) {
+      area.classList.remove('has-image');
+      zone.style.display = 'flex';
+      grid.style.display = 'none';
+      addMore.style.display = 'none';
+      grid.innerHTML = '';
+    } else {
+      area.classList.add('has-image');
+      zone.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.className = `multi-img-grid count-${Math.min(currentImages.length, 4)}`;
+      addMore.style.display = currentImages.length < 9 ? 'flex' : 'none';
+
+      grid.innerHTML = currentImages.slice(0, 4).map((src, i) => `
+        <div class="img-thumb">
+          <img src="${src}" alt="預覽">
+          <button class="rm-btn" onclick="removeOneImage(${i})">✕</button>
+        </div>
+      `).join('');
+      if (currentImages.length > 4) {
+        addMore.textContent = `＋ 已選 ${currentImages.length} 張（顯示前4張）`;
+      } else {
+        addMore.textContent = '＋ 繼續新增照片';
+      }
+    }
+    checkSubmit();
+  }
+
+  function removeOneImage(idx) {
+    currentImages.splice(idx, 1);
+    updatePreviewGrid();
+  }
+
+  // ── 載入雲端貼文 ──────────────────────────────────────────────
+  async function loadPosts() {
+    setLoading(true);
+    const feed = document.getElementById('posts-feed');
+    try {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      feed.innerHTML = '';
+      data.forEach(row => {
+        if (row.imgs && typeof row.imgs === 'string') {
+          try { row.imgs = JSON.parse(row.imgs); } catch { row.imgs = []; }
+        }
+        feed.appendChild(renderCard(row));
+      });
+    } catch(e) {
+      console.error('載入失敗', e);
+      feed.innerHTML = '<div style="text-align:center;padding:32px;color:#65676b">⚠️ 載入失敗：' + e.message + '</div>';
+    }
+    setLoading(false);
+  }
+
+  // ── 新增貼文 ─────────────────────────────────────────────────
+  async function submitPost() {
+    const text = document.getElementById('post-text').value.trim();
+    if (!text && currentImages.length === 0) return;
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = '發佈中…';
+
+    const now = new Date();
+    const full_date = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const timestamp = now.getTime().toString();
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, imgs: currentImages, full_date, timestamp })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert('發佈失敗：' + (err.error || res.status));
+      btn.disabled = false;
+      btn.textContent = '發佈';
+    } else {
+      closeModal();
+      await loadPosts();
+    }
+  }
+
+  // ── 刪除貼文 ──────────────────────────────────────────────────
+  async function deletePost(btnEl) {
+    if (!confirm('確定要刪除這則貼文？')) return;
+    const card = btnEl.closest('.post-card');
+    const id = card.dataset.id;
+    const res = await fetch(`${API_URL}?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { alert('刪除失敗'); return; }
+    card.remove();
+  }
+
+  // ── 按讚 ──────────────────────────────────────────────────────
+  async function toggleLike(btn) {
+    btn.classList.toggle('liked');
+    const card = btn.closest('.post-card');
+    const id = card.dataset.id;
+    const countEl = card.querySelector('.like-count');
+    const iconsEl = card.querySelector('.reaction-icons');
+    let count = parseInt(countEl.textContent) || 0;
+    const liked = btn.classList.contains('liked');
+    count = liked ? count + 1 : Math.max(0, count - 1);
+    iconsEl.textContent = count > 0 ? '👍' : '';
+    countEl.textContent = count;
+    await fetch(`${API_URL}?id=${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ likes: count, liked })
+    });
+  }
+
+  // ── Modal 控制 ────────────────────────────────────────────────
+  function openModal(type) {
+    document.getElementById('modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+    if (type === 'photo') setTimeout(() => toggleImageArea(), 100);
+    setTimeout(() => document.getElementById('post-text').focus(), 200);
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('show');
+    document.body.style.overflow = '';
+    resetModal();
+  }
+
+  function resetModal() {
+    document.getElementById('post-text').value = '';
+    currentImages = [];
+    const area = document.getElementById('image-preview-area');
+    area.classList.remove('has-image');
+    document.getElementById('upload-zone').style.display = 'flex';
+    document.getElementById('multi-img-grid').style.display = 'none';
+    document.getElementById('multi-img-grid').innerHTML = '';
+    document.getElementById('add-more-btn').style.display = 'none';
+    imageAreaVisible = false;
+    area.style.display = 'none';
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = '發佈';
+    document.getElementById('file-input').value = '';
+  }
+
+  function toggleImageArea() {
+    const area = document.getElementById('image-preview-area');
+    imageAreaVisible = !imageAreaVisible;
+    area.style.display = imageAreaVisible ? 'block' : 'none';
+    if (!imageAreaVisible) { currentImages = []; updatePreviewGrid(); }
+  }
+
+  function triggerFileInput() {
+    document.getElementById('file-input').click();
+  }
+
+  function handleFileSelect(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    const remaining = 9 - currentImages.length;
+    const toLoad = files.slice(0, remaining);
+
+    let loaded = 0;
+    toLoad.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        currentImages.push(ev.target.result);
+        loaded++;
+        if (loaded === toLoad.length) updatePreviewGrid();
+      };
+      reader.readAsDataURL(file);
+    });
+    document.getElementById('file-input').value = '';
+
+    // 確保圖片區域顯示
+    const area = document.getElementById('image-preview-area');
+    area.style.display = 'block';
+    imageAreaVisible = true;
+  }
+
+  function checkSubmit() {
+    const text = document.getElementById('post-text').value.trim();
+    document.getElementById('submit-btn').disabled = !(text || currentImages.length > 0);
+  }
+
+  // ── 初始化 ────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    loadPosts();
+
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    const zone = document.getElementById('upload-zone');
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.background='var(--primary-light)'; });
+    zone.addEventListener('dragleave', () => { zone.style.background=''; });
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault(); zone.style.background='';
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length) {
+        const dt = new DataTransfer();
+        files.forEach(f => dt.items.add(f));
+        document.getElementById('file-input').files = dt.files;
+        handleFileSelect({ target: { files: dt.files } });
+      }
+    });
+  });
+</script>
+</body>
+</html>
