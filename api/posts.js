@@ -1,6 +1,13 @@
 import { neon } from '@neondatabase/serverless';
+import { v2 as cloudinary } from 'cloudinary';
 
 const sql = neon(process.env.DATABASE_URL);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 async function initTable() {
   await sql`
@@ -23,6 +30,14 @@ function setCORS(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
+async function uploadToCloudinary(base64Str) {
+  const result = await cloudinary.uploader.upload(base64Str, {
+    folder: 'love-diary',
+    resource_type: 'image',
+  });
+  return result.secure_url;
+}
+
 export default async function handler(req, res) {
   setCORS(res);
 
@@ -40,9 +55,18 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const { text, imgs, full_date, timestamp } = req.body;
+      let imgUrls = [];
+      if (imgs && imgs.length > 0) {
+        imgUrls = await Promise.all(
+          imgs.map(async (img) => {
+            if (img.startsWith('http')) return img;
+            return await uploadToCloudinary(img);
+          })
+        );
+      }
       const result = await sql`
         INSERT INTO posts (text, imgs, full_date, timestamp, likes, liked)
-        VALUES (${text || ''}, ${JSON.stringify(imgs || [])}, ${full_date}, ${timestamp}, 0, false)
+        VALUES (${text || ''}, ${JSON.stringify(imgUrls)}, ${full_date}, ${timestamp}, 0, false)
         RETURNING *
       `;
       return res.status(201).json(result[0]);
@@ -56,12 +80,32 @@ export default async function handler(req, res) {
 
     if (req.method === 'PATCH') {
       const { id } = req.query;
-      const { likes, liked } = req.body;
-      const result = await sql`
-        UPDATE posts SET likes = ${likes}, liked = ${liked}
-        WHERE id = ${id} RETURNING *
-      `;
-      return res.status(200).json(result[0]);
+      const body = req.body;
+
+      if (body.update_content) {
+        const { text, imgs } = body;
+        let imgUrls = [];
+        if (imgs && imgs.length > 0) {
+          imgUrls = await Promise.all(
+            imgs.map(async (img) => {
+              if (img.startsWith('http')) return img;
+              return await uploadToCloudinary(img);
+            })
+          );
+        }
+        const result = await sql`
+          UPDATE posts SET text = ${text || ''}, imgs = ${JSON.stringify(imgUrls)}
+          WHERE id = ${id} RETURNING *
+        `;
+        return res.status(200).json(result[0]);
+      } else {
+        const { likes, liked } = body;
+        const result = await sql`
+          UPDATE posts SET likes = ${likes}, liked = ${liked}
+          WHERE id = ${id} RETURNING *
+        `;
+        return res.status(200).json(result[0]);
+      }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
