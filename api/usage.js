@@ -1,10 +1,13 @@
 import { v2 as cloudinary } from 'cloudinary';
+import { neon } from '@neondatabase/serverless';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+const sql = neon(process.env.DATABASE_URL);
 
 function setCORS(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,10 +19,12 @@ export default async function handler(req, res) {
   setCORS(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   try {
+    const postCount = await sql`SELECT COUNT(*) as cnt FROM posts`;
+    const total_posts = parseInt(postCount[0].cnt);
+
     let totalBytes = 0;
     let totalCount = 0;
     let nextCursor = null;
-
     do {
       const params = { type: 'upload', prefix: 'love-diary', max_results: 500 };
       if (nextCursor) params.next_cursor = nextCursor;
@@ -33,7 +38,7 @@ export default async function handler(req, res) {
     const limitGB = 25;
     const usedPct = (totalBytes / (limitGB * 1024 * 1024 * 1024) * 100).toFixed(2);
 
-    return res.status(200).json({ usedMB, limitGB, usedPct, totalCount });
+    return res.status(200).json({ usedMB, limitGB, usedPct, total_photos: totalCount, total_posts });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message });
