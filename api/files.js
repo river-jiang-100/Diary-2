@@ -29,6 +29,11 @@ export default async function handler(req, res) {
     await initTable();
 
     if (req.method === 'GET') {
+      const { id, content } = req.query;
+      if (id && content) {
+        const rows = await sql`SELECT * FROM files WHERE id = ${id}`;
+        return res.status(200).json(rows[0] || {});
+      }
       const rows = await sql`SELECT id, name, type, parent_id, size, created_at FROM files ORDER BY type DESC, name ASC`;
       return res.status(200).json(rows);
     }
@@ -46,7 +51,12 @@ export default async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       const { id } = req.query;
-      await sql`DELETE FROM files WHERE id = ${id} OR parent_id = ${id}`;
+      async function deleteRecursive(fid) {
+        const children = await sql`SELECT id FROM files WHERE parent_id = ${fid}`;
+        for (const c of children) await deleteRecursive(c.id);
+        await sql`DELETE FROM files WHERE id = ${fid}`;
+      }
+      await deleteRecursive(id);
       return res.status(200).json({ success: true });
     }
 
