@@ -1,6 +1,13 @@
 import { neon } from '@neondatabase/serverless';
+import { v2 as cloudinary } from 'cloudinary';
 
 const sql = neon(process.env.DATABASE_URL);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 function setCORS(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,8 +22,10 @@ async function initTable() {
       name TEXT NOT NULL,
       type TEXT NOT NULL,
       parent_id INTEGER DEFAULT NULL,
-      content TEXT DEFAULT '',
+      url TEXT DEFAULT '',
+      public_id TEXT DEFAULT '',
       size INTEGER DEFAULT 0,
+      mime_type TEXT DEFAULT '',
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
@@ -28,32 +37,61 @@ export default async function handler(req, res) {
   try {
     await initTable();
 
+    // GET
     if (req.method === 'GET') {
-      const { id, content } = req.query;
-      if (id && content) {
-        const rows = await sql`SELECT * FROM files WHERE id = ${id}`;
-        return res.status(200).json(rows[0] || {});
-      }
-      const rows = await sql`SELECT id, name, type, parent_id, size, created_at FROM files ORDER BY type DESC, name ASC`;
+      const rows = await sql`
+        SELECT id, name, type, parent_id, url, size, mime_type, created_at
+        FROM files ORDER BY type DESC, name ASC
+      `;
       return res.status(200).json(rows);
     }
 
+    // POST - 新增資料夾 或 上傳檔案到 Cloudinary
     if (req.method === 'POST') {
-      const { name, type, parent_id, content } = req.body;
-      const size = content ? Buffer.byteLength(content, 'utf8') : 0;
+      const { name, type, parent_id, content, mime_type } = req.body;
+
+      if (type === 'folder') {
+        const result = await sql`
+          INSERT INTO files (name, type, parent_id)
+          VALUES (${name}, 'folder', ${parent_id || null})
+          RETURNING id, name, type, parent_id, url, size, mime_type, created_at
+        `;
+        return res.status(201).json(result[0]);
+      }
+
+      // 上傳到 Cloudinary
+      const resourceType = mime_type && mime_type.startsWith('video') ? 'video'
+        : mime_type && mime_type.startsWith('image') ? 'image' : 'raw';
+
+      const uploadResult = await cloudinary.uploader.upload(content, {
+        folder: 'love-diary-files',
+        resource_type: resourceType,
+        public_id: `${Date.now()}_${name.replace(/[^a-zA-Z0-9._-]/g, '_')}`,
+        use_filename: false,
+      });
+
+      const size = uploadResult.bytes || 0;
       const result = await sql`
-        INSERT INTO files (name, type, parent_id, content, size)
-        VALUES (${name}, ${type}, ${parent_id || null}, ${content || ''}, ${size})
-        RETURNING id, name, type, parent_id, size, created_at
+        INSERT INTO files (name, type, parent_id, url, public_id, size, mime_type)
+        VALUES (${name}, 'file', ${parent_id || null}, ${uploadResult.secure_url}, ${uploadResult.public_id}, ${size}, ${mime_type || ''})
+        RETURNING id, name, type, parent_id, url, size, mime_type, created_at
       `;
       return res.status(201).json(result[0]);
     }
 
+    // DELETE
     if (req.method === 'DELETE') {
       const { id } = req.query;
       async function deleteRecursive(fid) {
-        const children = await sql`SELECT id FROM files WHERE parent_id = ${fid}`;
+        const children = await sql`SELECT id, public_id, type FROM files WHERE parent_id = ${fid}`;
         for (const c of children) await deleteRecursive(c.id);
+        // 刪除 Cloudinary 檔案
+        const fileRow = await sql`SELECT public_id, mime_type FROM files WHERE id = ${fid}`;
+        if (fileRow[0]?.public_id) {
+          const rt = fileRow[0].mime_type?.startsWith('video') ? 'video'
+            : fileRow[0].mime_type?.startsWith('image') ? 'image' : 'raw';
+          await cloudinary.uploader.destroy(fileRow[0].public_id, { resource_type: rt }).catch(() => {});
+        }
         await sql`DELETE FROM files WHERE id = ${fid}`;
       }
       await deleteRecursive(id);
