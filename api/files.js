@@ -2,7 +2,6 @@ import { neon } from '@neondatabase/serverless';
 import { v2 as cloudinary } from 'cloudinary';
 
 const sql = neon(process.env.DATABASE_URL);
-
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -16,19 +15,17 @@ function setCORS(res) {
 }
 
 async function initTable() {
-  await sql`
-    CREATE TABLE IF NOT EXISTS files (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL,
-      parent_id INTEGER DEFAULT NULL,
-      url TEXT DEFAULT '',
-      public_id TEXT DEFAULT '',
-      size INTEGER DEFAULT 0,
-      mime_type TEXT DEFAULT '',
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `;
+  await sql`CREATE TABLE IF NOT EXISTS files (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    parent_id INTEGER DEFAULT NULL,
+    url TEXT DEFAULT '',
+    public_id TEXT DEFAULT '',
+    size INTEGER DEFAULT 0,
+    mime_type TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`;
 }
 
 export default async function handler(req, res) {
@@ -37,59 +34,29 @@ export default async function handler(req, res) {
   try {
     await initTable();
 
-    // GET
     if (req.method === 'GET') {
-      const rows = await sql`
-        SELECT id, name, type, parent_id, url, size, mime_type, created_at
-        FROM files ORDER BY type DESC, name ASC
-      `;
+      const rows = await sql`SELECT id, name, type, parent_id, url, size, mime_type, created_at FROM files ORDER BY type DESC, name ASC`;
       return res.status(200).json(rows);
     }
 
-    // POST - 新增資料夾 或 上傳檔案到 Cloudinary
     if (req.method === 'POST') {
-      const { name, type, parent_id, content, mime_type } = req.body;
-
+      const { name, type, parent_id, url, public_id, size, mime_type } = req.body;
       if (type === 'folder') {
-        const result = await sql`
-          INSERT INTO files (name, type, parent_id)
-          VALUES (${name}, 'folder', ${parent_id || null})
-          RETURNING id, name, type, parent_id, url, size, mime_type, created_at
-        `;
+        const result = await sql`INSERT INTO files (name, type, parent_id) VALUES (${name}, 'folder', ${parent_id || null}) RETURNING id, name, type, parent_id, url, size, mime_type, created_at`;
         return res.status(201).json(result[0]);
       }
-
-      // 上傳到 Cloudinary
-      const resourceType = mime_type && mime_type.startsWith('video') ? 'video'
-        : mime_type && mime_type.startsWith('image') ? 'image' : 'raw';
-
-      const uploadResult = await cloudinary.uploader.upload(content, {
-        folder: 'love-diary-files',
-        resource_type: resourceType,
-        public_id: `${Date.now()}_${name.replace(/[^a-zA-Z0-9._-]/g, '_')}`,
-        use_filename: false,
-      });
-
-      const size = uploadResult.bytes || 0;
-      const result = await sql`
-        INSERT INTO files (name, type, parent_id, url, public_id, size, mime_type)
-        VALUES (${name}, 'file', ${parent_id || null}, ${uploadResult.secure_url}, ${uploadResult.public_id}, ${size}, ${mime_type || ''})
-        RETURNING id, name, type, parent_id, url, size, mime_type, created_at
-      `;
+      const result = await sql`INSERT INTO files (name, type, parent_id, url, public_id, size, mime_type) VALUES (${name}, 'file', ${parent_id || null}, ${url || ''}, ${public_id || ''}, ${size || 0}, ${mime_type || ''}) RETURNING id, name, type, parent_id, url, size, mime_type, created_at`;
       return res.status(201).json(result[0]);
     }
 
-    // DELETE
     if (req.method === 'DELETE') {
       const { id } = req.query;
       async function deleteRecursive(fid) {
-        const children = await sql`SELECT id, public_id, type FROM files WHERE parent_id = ${fid}`;
+        const children = await sql`SELECT id FROM files WHERE parent_id = ${fid}`;
         for (const c of children) await deleteRecursive(c.id);
-        // 刪除 Cloudinary 檔案
-        const fileRow = await sql`SELECT public_id, mime_type FROM files WHERE id = ${fid}`;
+        const fileRow = await sql`SELECT public_id, mime_type FROM files WHERE id = ${fid} AND type = 'file'`;
         if (fileRow[0]?.public_id) {
-          const rt = fileRow[0].mime_type?.startsWith('video') ? 'video'
-            : fileRow[0].mime_type?.startsWith('image') ? 'image' : 'raw';
+          const rt = fileRow[0].mime_type?.startsWith('video') ? 'video' : fileRow[0].mime_type?.startsWith('image') ? 'image' : 'raw';
           await cloudinary.uploader.destroy(fileRow[0].public_id, { resource_type: rt }).catch(() => {});
         }
         await sql`DELETE FROM files WHERE id = ${fid}`;
