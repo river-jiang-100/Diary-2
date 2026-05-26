@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   try {
     await initTable();
     if (req.method === 'GET') {
-      const rows = await sql`SELECT * FROM events ORDER BY year DESC, id ASC`;
+      const rows = await sql`SELECT * FROM events ORDER BY year ASC, id ASC`;
       return res.status(200).json(rows);
     }
     if (req.method === 'POST') {
